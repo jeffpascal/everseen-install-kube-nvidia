@@ -125,7 +125,7 @@
 
     - name: NVIDIA - Recursively find all RPM files in /tmp/rpms and its subdirectories
       find:
-        paths: /tmp/rpms/utils
+        paths: /tmp/rpms/nvidia
         patterns: '*.rpm'
         recurse: yes
       register: found_rpms
