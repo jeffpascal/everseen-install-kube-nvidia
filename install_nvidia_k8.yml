@@ -112,7 +112,7 @@
 
     - name: UTILS - Recursively find all RPM files in /tmp/rpms and its subdirectories
       find:
-        paths: /tmp/rpms/utils
+        paths: /tmp/rpms/rpm/utils
         patterns: '*.rpm'
         recurse: yes
       register: found_rpms
@@ -122,10 +122,11 @@
         name: "{{ item.path }}"
         state: present
       loop: "{{ found_rpms.files }}"
+      failed_when: found_rpms.matched == 0
 
     - name: NVIDIA - Recursively find all RPM files in /tmp/rpms and its subdirectories
       find:
-        paths: /tmp/rpms/nvidia
+        paths: /tmp/rpms/tpm/nvidia
         patterns: '*.rpm'
         recurse: yes
       register: found_rpms
@@ -135,6 +136,7 @@
         name: "{{ item.path }}"
         state: present
       loop: "{{ found_rpms.files }}"
+      failed_when: found_rpms.matched == 0
 
     - name: Reboot the server
       reboot:
