@@ -101,12 +101,18 @@
         dest: /tmp/rpms
         remote_src: yes
 
+    - name: Recursively find all RPM files in /tmp/rpms and its subdirectories
+      ansible.builtin.find:
+        paths: /tmp/rpms
+        patterns: '*.rpm'
+        recurse: yes
+      register: found_rpms
 
     - name: Install all RPMs in the specified directory
-      ansible.builtin.dnf:
-        name: "{{ item }}"
+      dnf:
+        name: "{{ item.path }}"
         state: present
-      loop: "{{ lookup('ansible.builtin.fileglob', '/tmp/rpms/*.rpm') }}"
+      loop: "{{ found_rpms.files }}"
 
     - name: Reboot the server
       reboot:
