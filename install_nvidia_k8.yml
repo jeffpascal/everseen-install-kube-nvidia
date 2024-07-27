@@ -84,6 +84,16 @@
 
 # transfer packages file to the target host
 
+    - name: Remove all Nvidia packages and their dependencies
+      dnf:
+        name: '*nvidia*'
+        state: absent
+        autoremove: yes
+
+    - name: Reset the Nvidia driver module
+      command:
+        cmd: dnf module reset nvidia-driver -y
+
     - name: Transfer NVIDIA driver packages
       copy:
         src: ./packages_archive.tar
@@ -102,7 +112,7 @@
         remote_src: yes
 
     - name: Recursively find all RPM files in /tmp/rpms and its subdirectories
-      ansible.builtin.find:
+      find:
         paths: /tmp/rpms
         patterns: '*.rpm'
         recurse: yes
