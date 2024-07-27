@@ -78,3 +78,58 @@
     - name: Display systemctl settings for 'syncthing'
       debug:
         var: syncthing_limits.stdout_lines
+
+
+################### END SYSTEM CHANGES
+
+# transfer packages file to the target host
+
+    - name: Transfer NVIDIA driver packages
+      copy:
+        src: ./packages_archive.tar
+        dest: /tmp/packages_archive.tar
+
+    - name: Unarchive NVIDIA driver packages
+          unarchive:
+            src: /tmp/packages_archive.tar
+            dest: /tmp/rpms
+            remote_src: yes
+
+    - name: Install all RPMs in the specified directory
+      ansible.builtin.dnf:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ lookup('ansible.builtin.fileglob', '/tmp/rpms/*.rpm') }}"
+
+    - name: Reboot the server
+      reboot:
+        msg: "Rebooting server to apply system limits"
+        connect_timeout: 5
+        reboot_timeout: 300
+        pre_reboot_delay: 0
+        post_reboot_delay: 0
+        test_command: uptime
+        
+
+    # - name: Install NVIDIA driver packages
+    #   yum:
+    #     name: /tmp/nvidia-driver-latest-dkms-*.el8.x86_64.rpm
+    #     state: present
+
+    # - name: Reboot the server
+    #   reboot:
+    #     msg: "Rebooting server to apply NVIDIA driver changes"
+    #     connect_timeout: 5
+    #     reboot_timeout: 300
+    #     pre_reboot_delay: 0
+    #     post_reboot_delay: 0
+    #     test_command: uptime
+
+    # - name: Validate NVIDIA driver installation
+    #   shell: dkms status
+    #   register: dkms_status
+    #   failed_when: dkms_status.rc != 0
+
+    # - name: Display NVIDIA driver status
+    #   debug:
+    #     var: dkms_status.stdout_lines

@@ -1,0 +1,1 @@
+sudo dnf download kmod-nvidia-latest-dkms nvidia-driver nvidia-driver-NVML nvidia-driver-NvFBCOpenGL nvidia-driver-cuda nvidia-driver-cuda-libs nvidia-driver-devel nvidia-driver-libs nvidia-kmod-common nvidia-libXNVCtrl nvidia-libXNVCtrl-devel nvidia-modprobe nvidia-persistenced nvidia-settings nvidia-xconfig libnvidia-nscq-535 nvidia-fabric-manager --resolve --destdir=/root
