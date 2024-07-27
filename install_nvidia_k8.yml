@@ -109,6 +109,17 @@
         pre_reboot_delay: 0
         post_reboot_delay: 0
         test_command: uptime
+
+    - name: Validate NVIDIA driver installation
+      command: nvidia-smi
+      register: nvidia-smi-output
+      changed_when: false
+
+    - name: Display systemctl settings for 'syncthing'
+      debug:
+        var: nvidia-smi-output.stdout_lines
+
+    
         
 
     # - name: Install NVIDIA driver packages
