@@ -45,6 +45,12 @@ Removed:
 
 ```
 
+These are missing also, not showing in the list above, after some attempts with rpm install
+
+````sudo dnf download --resolve gssproxy 'gssproxy >= 0.7.0-3' keyutils rpcbind 'libnvidia-container-tools >= 1.15.0-1' 'libnvidia-container-tools < 2.0.0' 'nvidia-container-toolkit-base = 1.15.0-1'``
+
+``````
+
 I then saved all of them with
 
 ```dnf download --resolve {package}```
