@@ -84,11 +84,9 @@
 
 # transfer packages file to the target host
 
-    - name: Remove all Nvidia packages and their dependencies
-      dnf:
-        name: '*nvidia*'
-        state: absent
-        autoremove: yes
+    - name: Reset the Nvidia driver module
+      command:
+        cmd: dnf autoremove -y '*nvidia*'
 
     - name: Reset the Nvidia driver module
       command:
