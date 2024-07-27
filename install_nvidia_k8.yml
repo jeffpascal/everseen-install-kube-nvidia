@@ -58,7 +58,7 @@
     - name: Validate system and user nofile and nproc settings
       shell: grep -P "^DefaultLimit(NOFILE|NPROC)=524288$" "{{ item }}"
       register: grep_systemd
-      failed_when: grep_systemd.stdout_lines | length != 4
+      failed_when: grep_systemd.stdout_lines | length != 2
       with_items:
         - /etc/systemd/system.conf
         - /etc/systemd/user.conf
