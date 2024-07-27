@@ -150,7 +150,6 @@
     - name: Validate NVIDIA driver installation
       command: nvidia-smi
       register: nvidia-smi-output
-      changed_when: false
 
     - name: Display systemctl settings for 'syncthing'
       debug:
