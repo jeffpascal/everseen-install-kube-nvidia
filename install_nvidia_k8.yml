@@ -110,29 +110,13 @@
         dest: /tmp/rpms
         remote_src: yes
 
-    - name: UTILS - Recursively find all RPM files in /tmp/rpms and its subdirectories
-      find:
-        paths: /tmp/rpms/rpm/utils
-        patterns: '*.rpm'
-        recurse: yes
-      register: found_rpms
-
     - name: UTILS - Install all RPMs in the specified directory
-      command: dnf --disablerepo=* install -y {{ item.path }}
-      loop: "{{ found_rpms.files }}"
-      failed_when: found_rpms.matched == 0
+      command: rpm -Uvh /tmp/rpms/rpm/utils/*.rpm
 
-    - name: NVIDIA - Recursively find all RPM files in /tmp/rpms and its subdirectories
-      find:
-        paths: /tmp/rpms/rpm/nvidia
-        patterns: '*.rpm'
-        recurse: yes
-      register: found_rpms
 
     - name: NVIDIA - Install all RPMs in the specified directory
-      command: dnf --disablerepo=* install -y {{ item.path }}
-      loop: "{{ found_rpms.files }}"
-      failed_when: found_rpms.matched == 0
+      command: rpm -Uvh /tmp/rpms/rpm/nvidia/*.rpm
+
 
     - name: Reboot the server
       reboot:
@@ -183,10 +167,5 @@
         mode: '0755' 
 
 
-    - name: Transfer NVIDIA driver packages
-      copy:
-        src: ./k0s-v1.30.2+k0s.0-amd64
-        dest: /usr/local/bin/k0s/k0s-v1.30.2+k0s.0-amd64
-
     - name: Unarchive NVIDIA driver packages
-      shell: mv ./k0s-v1.30.2+k0s.0-amd64 /usr/local/bin/k0s/k0s-v1.30.2+k0s.0-amd64 
+      shell: mv /tmp/rpms/k0s-v1.30.2+k0s.0-amd64 /usr/local/bin/k0s/k0s-v1.30.2+k0s.0-amd64 
