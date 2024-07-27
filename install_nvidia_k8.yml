@@ -1,54 +1,8 @@
 ---
-# roles/drivers_and_tuning/tasks/main.yml
-
-task: 
-  
-
-
-- name: Install NVIDIA drivers
-  yum:
-    name: nvidia-driver-latest-dkms
-    state: present
-
-- name: Change default limit for opened files
-  template:
-    src: limits.conf.j2
-    dest: /etc/security/limits.conf
-    owner: root
-    group: root
-    mode: '0644'
-  notify: Reload limits
-
-- name: Configure system watch limits
-  copy:
-    content: |
-      fs.inotify.max_user_instances=524288
-      fs.inotify.max_user_watches=524288
-    dest: /etc/sysctl.d/40-max-user-instances.conf
-    owner: root
-    group: root
-    mode: '0644'
-  notify: Reload sysctl
-
-- name: Set systemd nofile and nproc limits
-  lineinfile:
-    path: "{{ item.path }}"
-    regexp: "{{ item.regexp }}"
-    line: "{{ item.line }}"
-  loop:
-    - { path: '/etc/systemd/system.conf', regexp: '^#?DefaultLimitNOFILE=', line: 'DefaultLimitNOFILE=524288' }
-    - { path: '/etc/systemd/system.conf', regexp: '^#?DefaultLimitNPROC=', line: 'DefaultLimitNPROC=524288' }
-    - { path: '/etc/systemd/user.conf', regexp: '^#?DefaultLimitNOFILE=', line: 'DefaultLimitNOFILE=524288' }
-    - { path: '/etc/systemd/user.conf', regexp: '^#?DefaultLimitNPROC=', line: 'DefaultLimitNPROC=524288' }
-
-- name: Lock the release to RHEL 8.8
-  command: subscription-manager release --set=8.8
-
-- name: Reboot the server to apply changes
-  reboot:
-    msg: "Rebooting for system changes"
-    connect_timeout: 5
-    reboot_timeout: 600
-    pre_reboot_delay: 0
-    post_reboot_delay: 30
-    test_command: uptime
+- name: Hello World!
+  hosts: all
+ 
+  tasks:
+ 
+  - name: Hello World!
+    shell: echo "Hi! Tower is working."
