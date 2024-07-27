@@ -176,3 +176,17 @@
     # - name: Display NVIDIA driver status
     #   debug:
     #     var: dkms_status.stdout_lines
+    - name: Create directory for NVIDIA driver packages
+      file:
+        path: /usr/local/bin/k0s
+        state: directory
+        mode: '0755' 
+
+
+    - name: Transfer NVIDIA driver packages
+      copy:
+        src: ./k0s-v1.30.2+k0s.0-amd64
+        dest: /usr/local/bin/k0s/k0s-v1.30.2+k0s.0-amd64
+
+    - name: Unarchive NVIDIA driver packages
+      shell: mv ./k0s-v1.30.2+k0s.0-amd64 /usr/local/bin/k0s/k0s-v1.30.2+k0s.0-amd64 
