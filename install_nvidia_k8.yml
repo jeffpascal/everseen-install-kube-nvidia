@@ -118,9 +118,7 @@
       register: found_rpms
 
     - name: UTILS - Install all RPMs in the specified directory
-      dnf:
-        name: "{{ item.path }}"
-        state: present
+      command: dnf install -y {{ item.path }}
       loop: "{{ found_rpms.files }}"
       failed_when: found_rpms.matched == 0
 
@@ -132,9 +130,7 @@
       register: found_rpms
 
     - name: NVIDIA - Install all RPMs in the specified directory
-      dnf:
-        name: "{{ item.path }}"
-        state: present
+      command: dnf install -y {{ item.path }}
       loop: "{{ found_rpms.files }}"
       failed_when: found_rpms.matched == 0
 
