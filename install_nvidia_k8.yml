@@ -90,10 +90,10 @@
         dest: /tmp/packages_archive.tar
 
     - name: Unarchive NVIDIA driver packages
-          unarchive:
-            src: /tmp/packages_archive.tar
-            dest: /tmp/rpms
-            remote_src: yes
+      unarchive:
+        src: /tmp/packages_archive.tar
+        dest: /tmp/rpms
+        remote_src: yes
 
     - name: Install all RPMs in the specified directory
       ansible.builtin.dnf:
