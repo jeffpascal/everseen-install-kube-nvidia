@@ -91,6 +91,7 @@
     - name: Reset the Nvidia driver module
       command:
         cmd: dnf module reset nvidia-driver -y
+      ignore_errors: yes
 
     - name: Transfer NVIDIA driver packages
       copy:
