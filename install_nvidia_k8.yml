@@ -110,14 +110,27 @@
         dest: /tmp/rpms
         remote_src: yes
 
-    - name: Recursively find all RPM files in /tmp/rpms and its subdirectories
+    - name: UTILS - Recursively find all RPM files in /tmp/rpms and its subdirectories
       find:
-        paths: /tmp/rpms
+        paths: /tmp/rpms/utils
         patterns: '*.rpm'
         recurse: yes
       register: found_rpms
 
-    - name: Install all RPMs in the specified directory
+    - name: UTILS - Install all RPMs in the specified directory
+      dnf:
+        name: "{{ item.path }}"
+        state: present
+      loop: "{{ found_rpms.files }}"
+
+    - name: NVIDIA - Recursively find all RPM files in /tmp/rpms and its subdirectories
+      find:
+        paths: /tmp/rpms/utils
+        patterns: '*.rpm'
+        recurse: yes
+      register: found_rpms
+
+    - name: NVIDIA - Install all RPMs in the specified directory
       dnf:
         name: "{{ item.path }}"
         state: present
