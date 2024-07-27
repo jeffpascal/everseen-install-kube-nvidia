@@ -1,8 +1,80 @@
 ---
-- name: Hello World!
+- name: Configure and Validate System Limits
   hosts: all
- 
+  become: true
+
   tasks:
- 
-  - name: Hello World!
-    shell: echo "Hi! Tower is working."
+    - name: Set limits for number of open files
+      blockinfile:
+        path: /etc/security/limits.conf
+        block: |
+          * soft nofile 524288
+          * hard nofile 524288
+        marker: "# {mark} ANSIBLE MANAGED BLOCK"
+
+    - name: Configure inotify limits
+      copy:
+        dest: /etc/sysctl.d/40-max-user-instances.conf
+        content: |
+          fs.inotify.max_user_instances=524288
+          fs.inotify.max_user_watches=524288
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Set system-wide nofile and nproc limits in system.conf and user.conf
+      blockinfile:
+        path: "{{ item }}"
+        block: |
+          DefaultLimitNOFILE=524288
+          DefaultLimitNPROC=524288
+        marker: "# {mark} ANSIBLE MANAGED BLOCK"
+      with_items:
+        - /etc/systemd/system.conf
+        - /etc/systemd/user.conf
+
+    - name: Lock release to RHEL 8.8
+      command: subscription-manager release --set=8.8
+
+    - name: Reboot the server
+      reboot:
+        msg: "Rebooting server to apply system limits"
+        connect_timeout: 5
+        reboot_timeout: 300
+        pre_reboot_delay: 0
+        post_reboot_delay: 0
+        test_command: uptime
+
+    - name: Validate limits.conf settings
+      shell: grep -P "^\\* (soft|hard) nofile 524288$" /etc/security/limits.conf
+      register: grep_limits
+      failed_when: grep_limits.stdout_lines | length != 2
+
+    - name: Validate inotify settings
+      shell: grep -P "fs.inotify.max_user_(instances|watches)=524288" /etc/sysctl.d/40-max-user-instances.conf
+      register: grep_inotify
+      failed_when: grep_inotify.stdout_lines | length != 2
+
+    - name: Validate system and user nofile and nproc settings
+      shell: grep -P "^DefaultLimit(NOFILE|NPROC)=524288$" "{{ item }}"
+      register: grep_systemd
+      failed_when: grep_systemd.stdout_lines | length != 4
+      with_items:
+        - /etc/systemd/system.conf
+        - /etc/systemd/user.conf
+
+    - name: Check limits for the user service 'syncthing'
+      command: systemctl --user show syncthing
+      register: syncthing_limits
+      changed_when: false
+
+    - name: Assert correct settings for 'syncthing' service
+      assert:
+        that:
+          - "'LimitNOFILE=524288' in syncthing_limits.stdout"
+          - "'LimitNPROC=524288' in syncthing_limits.stdout"
+        fail_msg: "Limits for syncthing service are not set correctly"
+
+    - name: Display systemctl settings for 'syncthing'
+      debug:
+        var: syncthing_limits.stdout_lines
