@@ -31,6 +31,9 @@
         dest: /tmp/rpms
         remote_src: yes
 
+    - name: Download libverto-module-base
+      shell: dnf download libverto-module-base --destdir=/tmp/rpms/rpm/nvidia
+
     - name: Set limits for number of open files
       blockinfile:
         path: /etc/security/limits.conf
