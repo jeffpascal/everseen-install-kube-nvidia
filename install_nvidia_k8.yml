@@ -138,12 +138,12 @@
         test_command: uptime
 
     - name: Validate NVIDIA driver installation
-      command: nvidia-smi
-      register: nvidia-smi-output
+      shell: nvidia-smi
+      register: nvidia_output
 
     - name: Display systemctl settings for 'syncthing'
       debug:
-        var: nvidia-smi-output.stdout_lines
+        var: nvidia_output.stdout_lines
 
     
 ########################## K0S INSTALLATION
