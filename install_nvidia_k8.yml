@@ -7,7 +7,7 @@
 
     - name: Create /data
       shell: mkdir -p /data
-      
+
     - name: Transfer all required EVERSEEN packages
       copy:
         src: ./packages_archive.tar.gz
@@ -180,14 +180,6 @@
         - { regexp: '^(\s*ipMasq:).*', line: '      ipMasq: true' }
         - { regexp: '^(\s*enabled:).*', line: '    enabled: false' }
 
-    - name: Ensure firewalld is installed and running
-      package:
-        name: firewalld
-        state: present
-      service:
-        name: firewalld
-        state: started
-        enabled: true
 
     - name: Enable masquerade for the public zone
       firewalld:
