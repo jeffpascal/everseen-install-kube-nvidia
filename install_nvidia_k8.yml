@@ -4,6 +4,10 @@
   become: true
 
   tasks:
+
+    - name: Create /data
+      shell: mkdir -p /data
+      
     - name: Transfer all required EVERSEEN packages
       copy:
         src: ./packages_archive.tar.gz
