@@ -8,10 +8,16 @@
     - name: Create /data
       shell: mkdir -p /data
 
+    - name: Check if the packages archive already exists
+      ansible.builtin.stat:
+        path: /tmp/packages_archive.tar.gz
+      register: packages_archive
+
     - name: Transfer all required EVERSEEN packages
-      copy:
+      ansible.builtin.copy:
         src: ./packages_archive.tar.gz
         dest: /tmp/packages_archive.tar.gz
+      when: not packages_archive.stat.exists
 
     - name: Create directory for all required EVERSEEN packages
       file:
