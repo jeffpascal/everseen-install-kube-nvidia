@@ -49,7 +49,11 @@ These are missing also, not showing in the list above, after some attempts with 
 
 ````sudo dnf download --resolve gssproxy 'gssproxy >= 0.7.0-3' keyutils rpcbind 'libnvidia-container-tools >= 1.15.0-1' 'libnvidia-container-tools < 2.0.0' 'nvidia-container-toolkit-base = 1.15.0-1'``
 
-``````
+Also i needed to remove
+
+```iscsi-initiator-utils-6.2.1.4-8.git095f59c.el8_8.x86_64```
+
+since it was already installed
 
 I then saved all of them with
 
@@ -67,5 +71,9 @@ https://serverfault.com/questions/522525/rpm-ignore-conflicts
 
 I downloaded the k0s binary from the official website and then i copied it to the vm.
 
+
+## Installing helm
+
+Got all images from pods: kubectl get pods -n gpu-operator -o jsonpath="{range .items[*]}{range .spec.containers[*]}{.image}{'\n'}{end}{end}"
 
 

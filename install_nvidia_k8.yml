@@ -93,20 +93,20 @@
         cmd: dnf module reset nvidia-driver -y
       ignore_errors: yes
 
-    - name: Transfer NVIDIA driver packages
+    - name: Transfer all required EVERSEEN packages
       copy:
-        src: ./packages_archive.tar
-        dest: /tmp/packages_archive.tar
+        src: ./packages_archive.tar.gz
+        dest: /tmp/packages_archive.tar.gz
 
-    - name: Create directory for NVIDIA driver packages
+    - name: Create directory for all required EVERSEEN packages
       file:
         path: /tmp/rpms 
         state: directory
         mode: '0755' 
 
-    - name: Unarchive NVIDIA driver packages
+    - name: Unarchive all required EVERSEEN packages
       unarchive:
-        src: /tmp/packages_archive.tar
+        src: /tmp/packages_archive.tar.gz
         dest: /tmp/rpms
         remote_src: yes
 
@@ -136,30 +136,8 @@
         var: nvidia-smi-output.stdout_lines
 
     
-        
+########################## K0S INSTALLATION
 
-    # - name: Install NVIDIA driver packages
-    #   yum:
-    #     name: /tmp/nvidia-driver-latest-dkms-*.el8.x86_64.rpm
-    #     state: present
-
-    # - name: Reboot the server
-    #   reboot:
-    #     msg: "Rebooting server to apply NVIDIA driver changes"
-    #     connect_timeout: 5
-    #     reboot_timeout: 300
-    #     pre_reboot_delay: 0
-    #     post_reboot_delay: 0
-    #     test_command: uptime
-
-    # - name: Validate NVIDIA driver installation
-    #   shell: dkms status
-    #   register: dkms_status
-    #   failed_when: dkms_status.rc != 0
-
-    # - name: Display NVIDIA driver status
-    #   debug:
-    #     var: dkms_status.stdout_lines
     - name: Create directory for NVIDIA driver packages
       file:
         path: /usr/local/bin/k0s
@@ -167,5 +145,284 @@
         mode: '0755' 
 
 
-    - name: Unarchive NVIDIA driver packages
-      shell: mv /tmp/rpms/k0s-v1.30.2+k0s.0-amd64 /usr/local/bin/k0s/k0s-v1.30.2+k0s.0-amd64 
+    - name: Move k0 deployment to /usr/bin
+      shell: cp /tmp/rpms/k0s-v1.30.2+k0s.0-amd64 /usr/local/bin/k0s
+
+
+    - name: Create directory for NVIDIA driver packages
+      file:
+        path: /etc/k0s
+        state: directory
+        mode: '0755' 
+
+    - name: Create directory for NVIDIA driver packages
+      file:
+        path: /data/k0s
+        state: directory
+        mode: '0755' 
+
+
+    - name: Create k0s configuration file
+      shell: k0s config create > /etc/k0s/k0s.yaml
+      args:
+        creates: /etc/k0s/k0s.yaml
+
+    - name: Update k0s configuration for network and telemetry settings
+      lineinfile:
+        path: /etc/k0s/k0s.yaml
+        regexp: '{{ item.regexp }}'
+        line: '{{ item.line }}'
+      loop:
+        - { regexp: '^(\s*ipMasq:).*', line: '      ipMasq: true' }
+        - { regexp: '^(\s*enabled:).*', line: '    enabled: false' }
+
+    - name: Ensure firewalld is installed and running
+      package:
+        name: firewalld
+        state: present
+      service:
+        name: firewalld
+        state: started
+        enabled: true
+
+    - name: Enable masquerade for the public zone
+      firewalld:
+        zone: public
+        masquerade: yes
+        state: enabled
+        immediate: yes
+
+    - name: Add required ports to the firewall
+      firewalld:
+        port: "{{ item }}"
+        zone: public
+        state: enabled
+        permanent: true
+      loop:
+        - 80/tcp
+        - 6443/tcp
+        - 8132/tcp
+        - 10250/tcp
+        - 179/tcp
+        - 179/udp
+
+    - name: Add network sources to the firewall
+      firewalld:
+        source: "{{ item }}"
+        zone: public
+        state: enabled
+        permanent: true
+      loop:
+        - 10.244.0.0/16
+        - 10.96.0.0/12
+
+    - name: Reload firewall to apply changes
+      firewalld:
+        state: reloaded
+
+
+####################################################### install k0s controller
+    - name: Install k0s controller
+      shell: k0s install controller --config /etc/k0s/k0s.yaml --data-dir /data/k0s -d -v --enable-worker --labels openebs.io/storage=true,openebs.io/nfs-server=true,openebs.io/nodegroup=storage-node --no-taints
+      args:
+        creates: /etc/systemd/system/k0scontroller.service
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+
+    - name: Start k0s service
+      systemd:
+        name: k0scontroller
+        state: started
+        enabled: yes
+
+    - name: Check k0s status
+      command: k0s status
+      register: k0s_status
+      changed_when: false
+      failed_when: 'not k0s_status.stdout_lines'
+
+    - name: Debug output for k0s status
+      debug:
+        msg: "{{ k0s_status.stdout_lines }}"
+
+    - name: Ensure .kube directory exists
+      file:
+        path: "~/.kube"
+        state: directory
+        mode: '0755'
+
+    - name: Save kubeconfig for the new cluster
+      shell: k0s kubeconfig admin > ~/.kube/config
+      args:
+        creates: ~/.kube/config
+
+    - name: Extract Helm tarball
+      unarchive:
+        src: /tmp/rpms/helm-v3.15.3-linux-amd64.tar.gz
+        dest: /tmp/
+        remote_src: yes
+        extra_opts: [--strip-components=1]
+        # The extra_opts removes the top directory layer while unarchiving
+
+    - name: Move Helm binary to /usr/local/bin
+      command:
+        cmd: mv /tmp/rpms/helm /usr/local/bin/helm
+        removes: /tmp/helm
+        creates: /usr/local/bin/helm
+    
+    - name: Move kubectl to /usr/local/bin/
+      command:
+        cmd: mv /tmp/rpms/kubectl /usr/local/bin/kubectl
+
+
+##### INSTALL NVIDIA OPERATOR
+
+    - name: Create and edit Nvidia configuration for containerd
+      copy:
+        dest: /etc/k0s/containerd.d/nvidia.toml
+        content: |
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
+              privileged_without_host_devices = false
+              runtime_engine = ""
+              runtime_root = ""
+              runtime_type = "io.containerd.runc.v1"
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
+              BinaryName = "/usr/bin/nvidia-container-runtime"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Apply Kubernetes RuntimeClass for Nvidia
+      shell: |
+        cat <<EOF | kubectl apply -f -
+        apiVersion: node.k8s.io/v1
+        kind: RuntimeClass
+        metadata:
+          name: nvidia
+        handler: nvidia
+        EOF
+      args:
+        executable: /bin/bash
+
+    - name: Restart k0scontroller service
+      systemd:
+        name: k0scontroller
+        state: restarted
+
+
+
+    - name: Set executable permissions on kubectl
+      file:
+        path: /usr/local/bin/kubectl
+        mode: a+x
+
+
+################# NVIDIA GPU OPERATOR
+
+    - name: Check if the local Helm chart directory exists
+      stat:
+        path: "/tmp/rpms/gpu-operator"
+      register: chart_dir
+
+    - name: Fail if the Helm chart directory does not exist
+      fail:
+        msg: "The required GPU Operator Helm chart directory does not exist."
+      when: not chart_dir.stat.exists
+
+    - name: Create the namespace for GPU Operator
+      shell:
+        cmd: "kubectl create namespace gpu-operator --dry-run=client -o yaml | kubectl apply -f -"
+      ignore_errors: yes  # Ignore errors if the namespace already exists
+
+    - name: Load Docker images using Podman
+      shell:
+        cmd: "podman load -i {{ item }}"
+      loop:
+        - /tmp/rpms/nvidia-k8s-device-plugin_v0.15.0-ubi8.tar
+        - /tmp/rpms/node-feature-discovery_v0.15.4.tar
+        - /tmp/rpms/nvidia-gpu-operator_v24.3.0.tar
+        - /tmp/rpms/nvidia-gpu-operator-validator_v24.3.0.tar
+        - /tmp/rpms/nvidia-dcgm-exporter_3.3.5-3.4.1-ubuntu22.04.tar
+  
+    - name: Create custom values file for Helm deployment
+      copy:
+        dest: "/tmp/gpu-operator-values.yaml"
+        content: |
+          global:
+            pullPolicy: Never
+
+# TODO: setting gpu operator values to set pull policy to Never does not work
+    - name: Install GPU Operator from local chart directory
+      shell: helm install --wait --generate-name -n gpu-operator /tmp/rpms/gpu-operator --set driver.enabled=false --set toolkit.enabled=false --values /tmp/gpu-operator-values.yaml
+
+
+################# openebs-lite
+    - name: Load Docker images using Podman
+      shell: "podman load -i /tmp/rpms/{{ item }}"
+      loop:
+        - "provisioner-localpv_3.5.0.tar"
+        - "node-disk-exporter_2.1.0.tar"
+        - "node-disk-manager_2.1.0.tar"
+        - "node-disk-operator_2.1.0.tar"
+        - "provisioner-nfs_0.11.0.tar"
+
+    - name: Update YAML file using sed
+      shell:
+        cmd: "sed -i 's/imagePullPolicy: Always/imagePullPolicy: Never/g' /tmp/rpms/openebs-lite.yaml"
+
+    - name: Wait for Nvidia GPU Operator to be fully installed and running
+      shell:
+        cmd: "kubectl -n gpu-operator get pods --field-selector=status.phase=Running"
+        register: gpu_status
+        until: gpu_status.stdout.find("gpu-operator") != -1
+        retries: 30
+        delay: 60
+
+    - name: Configure Nvidia time-slicing
+      shell:
+        cmd: |
+          kubectl create -n gpu-operator -f - <<EOF
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: time-slicing-config-all
+            namespace: gpu-operator
+          data:
+            any: |-
+              version: v1
+              flags:
+                migStrategy: none
+              sharing:
+                timeSlicing:
+                  resources:
+                  - name: nvidia.com/gpu
+                    replicas: 10
+          EOF
+
+    - name: Patch the ClusterPolicy to use time-slicing config
+      shell:
+        cmd: |
+          kubectl patch clusterpolicy/cluster-policy -n gpu-operator --type merge \
+          -p '{"spec": {"devicePlugin": {"config": {"name": "time-slicing-config-all", "default": "any"}}}}'
+
+    - name: Validate GPU detection and labels
+      shell:
+        cmd: "kubectl get no k0s-tutorial -o yaml"
+      register: node_info
+      failed_when: >
+        (node_info.stdout.find('nvidia.com/gpu: "10"') == -1) or
+        (node_info.stdout.find('nvidia.com/gpu.count: "0"') != -1)
+
+    - name: Install OpenEBS-Lite local PV operator
+      shell:
+        cmd: "kubectl apply -f /tmp/rpms/openebs-lite.yaml"
+
+    - name: Ensure OpenEBS-Lite PV operator is running correctly
+      shell:
+        cmd: "kubectl -n openebs get po"
+        register: openebs_status
+        until: openebs_status.stdout.find("Running") != -1
+        retries: 10
+        delay: 30
