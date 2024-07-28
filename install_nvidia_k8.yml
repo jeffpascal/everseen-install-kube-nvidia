@@ -4,6 +4,23 @@
   become: true
 
   tasks:
+    - name: Transfer all required EVERSEEN packages
+      copy:
+        src: ./packages_archive.tar.gz
+        dest: /tmp/packages_archive.tar.gz
+
+    - name: Create directory for all required EVERSEEN packages
+      file:
+        path: /tmp/rpms 
+        state: directory
+        mode: '0755' 
+
+    - name: Unarchive all required EVERSEEN packages
+      unarchive:
+        src: /tmp/packages_archive.tar.gz
+        dest: /tmp/rpms
+        remote_src: yes
+
     - name: Set limits for number of open files
       blockinfile:
         path: /etc/security/limits.conf
@@ -92,23 +109,6 @@
       command:
         cmd: dnf module reset nvidia-driver -y
       ignore_errors: yes
-
-    - name: Transfer all required EVERSEEN packages
-      copy:
-        src: ./packages_archive.tar.gz
-        dest: /tmp/packages_archive.tar.gz
-
-    - name: Create directory for all required EVERSEEN packages
-      file:
-        path: /tmp/rpms 
-        state: directory
-        mode: '0755' 
-
-    - name: Unarchive all required EVERSEEN packages
-      unarchive:
-        src: /tmp/packages_archive.tar.gz
-        dest: /tmp/rpms
-        remote_src: yes
 
     - name: UTILS - Install all RPMs in the specified directory
       command: rpm -Uvh /tmp/rpms/rpm/utils/*.rpm
