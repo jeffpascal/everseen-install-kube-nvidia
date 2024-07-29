@@ -8,6 +8,8 @@
     - name: Create /data
       shell: mkdir -p /data
 
+  ## TODO check if /data mount exists
+
     - name: Check if the packages archive already exists
       ansible.builtin.stat:
         path: /tmp/packages_archive.tar.gz
@@ -151,14 +153,10 @@
       debug:
         var: nvidia_output.stdout_lines
 
+    ## TODO: Validate nvidia SMI works
+
     
 ########################## K0S INSTALLATION
-
-    - name: Create directory for NVIDIA driver packages
-      file:
-        path: /usr/local/bin/k0s
-        state: directory
-        mode: '0755' 
 
 
     - name: Move k0 deployment to /usr/bin
