@@ -222,9 +222,10 @@
         - 10.244.0.0/16
         - 10.96.0.0/12
 
-    - name: Reload firewall to apply changes
-      firewalld:
-        state: reloaded
+    - name: Firewall set runtime to permananet 
+      shell: firewall-cmd --runtime-to-permanent
+
+    
 
 
 ####################################################### install k0s controller
